@@ -58,8 +58,8 @@ fn preview(session: &mut Session, _: &Value) -> Result<Value> {
     let mut details = Value::Null;
     if let Some(group) = active_group {
         let mut eligible_ids: Vec<PhotoId> = group.asset_ids.iter().copied().map(PhotoId)
-            .filter(|id| session.catalog.photo(*id).is_some_and(eligible)).collect();
-        eligible_ids.sort_by_key(|id| session.catalog.photo(*id).map(candidate_key));
+            .filter(|id| session.catalog.photo(*id).is_some_and(|photo| eligible(photo.as_ref()))).collect();
+        eligible_ids.sort_by_key(|id| session.catalog.photo(*id).map(|photo| candidate_key(photo.as_ref())));
         let suggested = eligible_ids.first().map(|id| id.0);
         let peers: Vec<u64> = eligible_ids.iter().filter(|id| **id != active)
             .filter(|id| session.catalog.photo(**id).is_some_and(|photo| !photo.is_edited()))
@@ -73,7 +73,7 @@ fn preview(session: &mut Session, _: &Value) -> Result<Value> {
             "reference": active.0,
             "total": group.asset_ids.len(),
             "blocked": group.asset_ids.len().saturating_sub(eligible_ids.len()),
-            "alreadyEdited": eligible_ids.iter().filter(|id| **id != active && session.catalog.photo(**id).is_some_and(Photo::is_edited)).count(),
+            "alreadyEdited": eligible_ids.iter().filter(|id| **id != active && session.catalog.photo(**id).is_some_and(|photo| photo.is_edited())).count(),
         });
     }
     Ok(json!({"active": active.0,"scope": "visible_RAW_only","inspected": evidence.len(),"momentCount":groups.len(),"activeMoment":details}))
