@@ -3233,6 +3233,7 @@ dependencies = [
  "lightcraft-lensdb",
  "lightcraft-merge",
  "lightcraft-meta",
+ "lightcraft-photo-workflow",
  "lightcraft-pipeline",
  "lightcraft-preview",
  "lightcraft-raster",
@@ -3370,6 +3371,15 @@ dependencies = [
  "quick-xml 0.38.4",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "lightcraft-photo-workflow"
+version = "0.7.1"
+dependencies = [
+ "lightcraft-develop",
+ "serde",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

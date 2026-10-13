@@ -57,6 +57,7 @@ pub mod preset_import;
 pub mod preset_luminar;
 pub mod presets;
 pub mod proof;
+pub use lightcraft_photo_workflow as photo_workflow;
 pub mod rename;
 pub mod segment;
 pub mod sidecar;
