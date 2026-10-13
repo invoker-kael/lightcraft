@@ -7,7 +7,7 @@ use lightcraft_develop::{controls, DevelopSettings, WbMode, WbScale};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct AdaptiveAdjustments {
     pub exposure: Option<f64>,
     pub contrast: Option<f64>,
@@ -22,6 +22,7 @@ pub struct AdaptiveAdjustments {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct AdaptiveRecipe {
     /// Photo-Cake provenance, not a LightCraft develop process version.
     pub recipe_id: String,

@@ -28,3 +28,38 @@ Lightroom Classic comparison and conservative Adobe XMP handoff remain a transit
 
 Original projects: `storytold/lightcraft` (MIT OR Apache-2.0) and `invoker-kael/Photo-Cake`.
 Do not repurpose ArtCraft trademarks or branded assets when distributing a separately branded product; keep required license notices.
+
+
+## Stage 1B: validated native batch commands
+
+Following the typed recipe mapper in lightcraft-photo-workflow, the same fork now supplies command IDs smart.recipe.preflight and smart.recipe.apply through the **existing** engine registry (UI, CLI, control channel, MCP). These commands only accept explicit, already-resolved adaptive Recipes. They do not yet compute Moment/embedding similarity, Reference candidates or AI recommendations.
+
+Input (as the params body of engine.execute):
+
+    {
+      "reference": 1,
+      "processVersion": 1,
+      "targets": [
+        {
+          "id": 2,
+          "recipe": {
+            "recipe_id": "photo-cake-recipe-2",
+            "source_reference_ids": ["original-reference-uuid"],
+            "adjustments": {"exposure": 0.4, "highlights": -20.0}
+          }
+        }
+      ]
+    }
+
+- reference and target IDs are **numeric LightCraft catalog PhotoIds**. Recipe provenance IDs remain the original Photo-Cake strings/UUIDs. A persistent ID reconciliation layer is a future migration requirement; do not assume the two are the same.
+- preflight is read-only and reports referenceHash plus each target's READY, UNCHANGED or BLOCKED status, reason, expectedHash and afterHash. It does not mutate original RAW, XMP or the catalog.
+- apply requires the same body **plus** referenceHash and an expectedHash on every matching target from the previous preflight. Every input is revalidated against the current native catalog; any stale or blocked target aborts all changes before commit. One successful apply writes **one native catalog undo transaction**; edit.undo reverses that whole batch.
+- LightCraft's own typed resolve_recipe is the only parameter mapping function. Eight global edits can be mapped today, and paired white balance is permitted only with explicit verifiedKelvin and a matching native Kelvin scale; unknown fields, invalid values and unsupported process versions fail closed.
+- Individual edits are protected by default. overwriteEdited must be explicit and still cannot bypass caller protected=true, Reject, deleted/Local or unsupported/preview-only RAW. Photo-Cake must mark its HDR sources and previous approvals protected=true until those decisions are natively represented.
+- During Lightroom comparison, smart.recipe.apply deliberately bypasses automatic XMP sidecar writes. User-owned Adobe crs: data is not modified by this command. Native DevelopSettings and catalog history remain the edit authority; intentional export or separate Lightroom sidecar handoff must be invoked later.
+
+This stage completes the initial **execution bridge**, not the smart photography planner or native UI. Future work must reuse it rather than duplicate its validation or reintroduce a parallel SQLite edit state.
+
+## Verification
+
+The command module includes coverage for read-only preflight, native one-step undo, stale-state rejection, protecting edited and rejected photos, explicit override preserving unrelated edits, uncalibrated white balance and unknown Recipe fields. Production validation also requires real Windows RAW fixtures, Lightroom image comparisons and full fork CI. Never assert Lightroom/LightCraft rendering parity merely because numeric controls agree.
