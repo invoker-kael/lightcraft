@@ -25,6 +25,7 @@ pub mod presets;
 pub mod profiles;
 pub mod right;
 pub mod rules_editor;
+pub mod smart_batch;
 pub mod second;
 pub mod settings;
 pub mod strip;

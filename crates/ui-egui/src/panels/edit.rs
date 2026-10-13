@@ -141,6 +141,8 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
     if n > 1 && matches!(app.ui.view, crate::state::ViewMode::PhotoGrid | crate::state::ViewMode::SquareGrid) {
         quick_develop(app, ui, n);
     }
+    // The Photo-Cake batch workbench previews native guarded edits before any write.
+    super::smart_batch::show(app, ui, id);
     if app.session.auto_sync && n > 1 {
         egui::Frame::NONE.inner_margin(egui::Margin { left: 24, right: 22, top: 0, bottom: 10 }).show(ui, |ui| {
             ui.horizontal(|ui| {

@@ -63,3 +63,7 @@ This stage completes the initial **execution bridge**, not the smart photography
 ## Verification
 
 The command module includes coverage for read-only preflight, native one-step undo, stale-state rejection, protecting edited and rejected photos, explicit override preserving unrelated edits, uncalibrated white balance and unknown Recipe fields. Production validation also requires real Windows RAW fixtures, Lightroom image comparisons and full fork CI. Never assert Lightroom/LightCraft rendering parity merely because numeric controls agree.
+
+## Stage 1C: native photographer-facing Smart Batch controls
+
+The Edit sidebar displays a **Smart Batch · Reference → selected photos** section whenever a Reference (active photo) and peers are selected. The user chooses which eight tonal/color controls to copy, opts into conservative shutter/aperture/ISO exposure adaptation, checks a read-only plan, sees READY/BLOCKED/UNCHANGED counts, then explicitly applies only READY photos through the existing `smart.recipe.apply` command. The whole set is one native undo step. Edits, rejects and unsupported RAWs remain protected by backend rules. No automatic cross-Moment similarity, AI exposure adaptation or HDR-bracket recognition is claimed yet; HDR source sets must be excluded manually before apply. This temporary interface will evolve into the full Moment/Reference/Exception Review workbench once Photo-Cake grouping and persistent identity mapping are migrated.
