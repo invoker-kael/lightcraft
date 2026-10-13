@@ -3,6 +3,8 @@
 //! This initial bridge deliberately does not copy Photo-Cake's catalog or XMP writer.
 #![forbid(unsafe_code)]
 
+pub mod moment;
+
 use lightcraft_develop::{controls, DevelopSettings, WbMode, WbScale};
 use serde::{Deserialize, Serialize};
 

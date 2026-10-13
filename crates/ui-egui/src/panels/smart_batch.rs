@@ -11,6 +11,7 @@ use crate::LightcraftApp;
 
 const PLAN: &str = "smart.recipe.preflight";
 const APPLY: &str = "smart.recipe.apply";
+const MOMENT: &str = "smart.moments.preview";
 const FIELDS: [(&str, &str); 8] = [
     ("Exposure", "light.exposure"),
     ("Contrast", "light.contrast"),
@@ -27,11 +28,12 @@ struct SmartBatchUi {
     fields: [bool; 8],
     exif_exposure: bool,
     plan: Option<(Value, Value)>,
+    moment_preview: Option<Value>,
     notice: Option<String>,
 }
 impl Default for SmartBatchUi {
     fn default() -> Self {
-        Self { fields: [true; 8], exif_exposure: true, plan: None, notice: None }
+        Self { fields: [true; 8], exif_exposure: true, plan: None, moment_preview: None, notice: None }
     }
 }
 
@@ -131,16 +133,74 @@ fn approved_payload(request: &Value, report: &Value) -> Option<Value> {
     Some(payload)
 }
 
-pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
-    if app.session.selection.ids.iter().filter(|peer| **peer != id).count() == 0 {
-        return;
+/// Select eligible non-edited peers only, retaining the photographer's current Reference.
+fn moment_selection(preview: &Value, reference: PhotoId) -> Result<Vec<u64>, String> {
+    let moment = &preview["activeMoment"];
+    if preview["active"].as_u64() != Some(reference.0) || moment["reference"].as_u64() != Some(reference.0) {
+        return Err("Moment preview belongs to a different Reference. Find Moment again.".into());
     }
+    let Some(peers) = moment["eligiblePeerIds"].as_array() else {
+        return Err("No moment candidates for the selected Reference".into());
+    };
+    if peers.len() > 1000 { return Err("Moment has over 1000 targets. Filter the library first.".into()); }
+    let mut ids = vec![reference.0];
+    for id in peers {
+        let number = id.as_u64().ok_or("Moment contains an invalid photo ID")?;
+        if !ids.contains(&number) { ids.push(number); }
+    }
+    if ids.len() < 2 { return Err("No unedited peer RAW photos in this Moment".into()); }
+    Ok(ids)
+}
+
+pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
     let state_id = egui::Id::new("photo-cake-smart-batch-ui");
     let mut state: SmartBatchUi = ui.ctx().data(|d| d.get_temp(state_id)).unwrap_or_default();
+    if state.moment_preview.as_ref().is_some_and(|m| m["active"].as_u64() != Some(id.0)) {
+        state.moment_preview = None;
+        state.plan = None;
+    }
     egui::Frame::NONE.inner_margin(egui::Margin { left: 24, right: 22, top: 8, bottom: 12 }).show(ui, |ui| {
         egui::CollapsingHeader::new("Smart Batch · Reference → selected photos")
             .default_open(true)
             .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("Find Current Moment").on_hover_text("Find nearby captures using Photo-Cake's conservative time, camera and sequence rules").clicked() {
+                        match app.run(MOMENT, json!({})) {
+                            Ok(result) => { state.moment_preview = Some(result); state.notice = None; }
+                            Err(e) => { state.moment_preview = None; state.notice = Some(format!("Moment discovery failed: {e}")); }
+                        }
+                    }
+                });
+                if let Some(moment_data) = state.moment_preview.clone() {
+                    let moment = &moment_data["activeMoment"];
+                    if moment.is_null() {
+                        ui.label(RichText::new("The active photo is not in a visible, eligible RAW Moment. Check the library filter.").small().weak());
+                    } else {
+                        let total = moment["total"].as_u64().unwrap_or(0);
+                        let blocked = moment["blocked"].as_u64().unwrap_or(0);
+                        let individually_edited = moment["alreadyEdited"].as_u64().unwrap_or(0);
+                        let suggested = moment["suggestedReference"].as_u64();
+                        ui.label(RichText::new(format!(
+                            "Moment: {total} RAW · {blocked} excluded · {individually_edited} already edited · suggested Reference: {}",
+                            suggested.map_or("none".into(), |id| format!("#{id}"))
+                        )).small());
+                        ui.label(RichText::new("This is time/sequence grouping, not AI visual matching. The current photo remains the Reference.").small().weak());
+                        let selection = moment_selection(&moment_data, id);
+                        if ui.add_enabled(selection.is_ok(), egui::Button::new("Select Moment Peers")).clicked() {
+                            if let Ok(ids) = selection {
+                                match app.run("library.select", json!({"ids": ids, "active": id.0, "mode": "replace"})) {
+                                    Ok(_) => {
+                                        state.plan = None;
+                                        state.moment_preview = None;
+                                        state.notice = Some("Moment peers selected. Review settings, then Check Batch.".into());
+                                    }
+                                    Err(e) => { state.notice = Some(format!("Moment selection failed: {e}")); }
+                                }
+                            }
+                        }
+                    }
+                }
+                ui.separator();
                 ui.label(RichText::new("Current active RAW = Reference. Only selected peers are candidates.").small());
                 ui.label(RichText::new("EXIF exposure matching is a starting estimate, not scene-aware AI. Review each result.").small().weak());
                 ui.add_space(5.0);
@@ -220,6 +280,14 @@ mod tests {
         }
         s.selection = Selection { ids: vec![PhotoId(1), PhotoId(2), PhotoId(3)], active: Some(PhotoId(1)) };
         s
+    }
+
+    #[test]
+    fn moment_selection_keeps_reference_and_requires_same_active_photo() {
+        let preview = json!({"active": 1, "activeMoment": {"reference": 1, "eligiblePeerIds": [2,3]}});
+        assert_eq!(moment_selection(&preview, PhotoId(1)).expect("peers"), vec![1,2,3]);
+        assert!(moment_selection(&preview, PhotoId(9)).is_err());
+        assert!(moment_selection(&json!({"active":1,"activeMoment": {"reference":1,"eligiblePeerIds":[]}}), PhotoId(1)).is_err());
     }
 
     #[test]

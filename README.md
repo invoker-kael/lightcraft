@@ -302,7 +302,7 @@ lightcraft --control 7980 ~/Pictures/trip
 
 ## Photo-Cake smart photography integration (personal fork)
 
-This user-maintained fork is being prepared as one LightCraft editing workstation plus Photo-Cake's intelligent photography workflow. The first engine bridge exposes guarded `smart.recipe.preflight` and `smart.recipe.apply` commands over LightCraft's existing catalog, renderer and undo. A first guarded Smart Batch section now lives in the Edit sidebar for a selected Reference and peer photos; semantic Moment matching, persistent Photo-Cake Reference selection and exception-first Review are **not yet migrated**. Lightroom comparison and the original Photo-Cake XMP handoff remain available during the transition. See [the integration plan](docs/photo-cake-integration.md).
+This user-maintained fork is being prepared as one LightCraft editing workstation plus Photo-Cake's intelligent photography workflow. The first engine bridge exposes guarded `smart.recipe.preflight` and `smart.recipe.apply` commands over LightCraft's existing catalog, renderer and undo. A first guarded Smart Batch section now lives in the Edit sidebar for a selected Reference and peer photos; conservative Photo-Cake Moment discovery and Reference suggestions are available in the Edit sidebar; persistent Moment IDs, cross-Moment semantic matching and exception-first Review are **not yet migrated**. Lightroom comparison and the original Photo-Cake XMP handoff remain available during the transition. See [the integration plan](docs/photo-cake-integration.md).
 
 ## Feature status
 
